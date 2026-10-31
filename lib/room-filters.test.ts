@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { studyRooms } from "@/data/study-rooms";
 import type { StudyRoom } from "@/types/room";
 
-import { countActiveFilters, emptyRoomFilters, filterRooms, getRoomFilterOptions } from "./room-filters";
+import { countActiveFilters, emptyRoomFilters, filterRooms, getRoomEmptyState, getRoomFilterOptions } from "./room-filters";
 
 function room(overrides: Partial<StudyRoom>): StudyRoom {
   return {
@@ -121,5 +121,37 @@ describe("countActiveFilters", () => {
   it("counts selections across all groups", () => {
     expect(countActiveFilters(emptyRoomFilters)).toBe(0);
     expect(countActiveFilters({ topics: ["a", "b"], moods: ["cozy"], tags: ["x"] })).toBe(4);
+  });
+});
+
+
+describe("getRoomEmptyState", () => {
+  it("names the search term when only a search is active", () => {
+    const state = getRoomEmptyState("zzz", 0);
+    expect(state.title).toBe("No rooms match “zzz”");
+    expect(state.clear).toBe("search");
+  });
+
+  it("keeps the filter wording when only filters are active", () => {
+    const state = getRoomEmptyState("", 2);
+    expect(state.title).toBe("No rooms match those filters");
+    expect(state.clear).toBe("filters");
+  });
+
+  it("covers search and filters together", () => {
+    const state = getRoomEmptyState("math", 1);
+    expect(state.title).toContain("“math”");
+    expect(state.clear).toBe("both");
+  });
+
+  it("trims the term and treats whitespace-only as no search", () => {
+    expect(getRoomEmptyState("  react  ", 0).title).toBe("No rooms match “react”");
+    expect(getRoomEmptyState("   ", 1).clear).toBe("filters");
+  });
+
+  it("shortens very long search terms", () => {
+    const title = getRoomEmptyState("a".repeat(100), 0).title;
+    expect(title).toContain("…");
+    expect(title.length).toBeLessThan(70);
   });
 });

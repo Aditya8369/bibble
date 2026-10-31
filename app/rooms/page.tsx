@@ -8,8 +8,10 @@ import { SiteHeader } from "@/components/site-header";
 import { studyRooms } from "@/data/study-rooms";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import {
+  countActiveFilters,
   emptyRoomFilters,
   filterRooms,
+  getRoomEmptyState,
   getRoomFilterOptions,
   type RoomFilterGroup,
   type RoomFilters,
@@ -39,6 +41,7 @@ export default function RoomsPage() {
   const [customRooms] = useLocalStorage<StudyRoom[]>(CUSTOM_ROOMS_KEY, []);
   const [pendingRoom, setPendingRoom] = useState<StudyRoom | null>(null);
   const entryTriggerRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const openGuidelines = useCallback((room: StudyRoom, trigger: HTMLButtonElement) => {
     entryTriggerRef.current = trigger;
@@ -84,6 +87,13 @@ export default function RoomsPage() {
     setFilters(emptyRoomFilters);
     setQuery("");
   };
+  
+  const clearSearch = () => {
+    setQuery("");
+    searchInputRef.current?.focus();
+  };
+
+  const emptyState = getRoomEmptyState(query, countActiveFilters(filters));
 
   return (
     <main className="rooms-page">
@@ -115,6 +125,7 @@ export default function RoomsPage() {
         <div className="room-search">
           <Search size={17} />
           <input
+            ref={searchInputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search a topic or room"
@@ -149,10 +160,15 @@ export default function RoomsPage() {
         </section>
       ) : (
         <section className="rooms-empty">
-          <h2>No rooms match those filters</h2>
-          <p>Try removing a filter or two, or clear everything to see all rooms.</p>
-          <button type="button" className="room-filter-clear" onClick={clearFilters}>
-            <X size={14} /> Clear filters
+                    <h2>{emptyState.title}</h2>
+          <p>{emptyState.description}</p>
+          <button
+            type="button"
+            className="room-filter-clear"
+            onClick={emptyState.clear === "search" ? clearSearch : clearFilters}
+          >
+            <X size={14} />{" "}
+            {emptyState.clear === "search" ? "Clear search" : emptyState.clear === "both" ? "Clear search and filters" : "Clear filters"}
           </button>
         </section>
       )}
