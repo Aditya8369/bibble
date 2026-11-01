@@ -8,6 +8,7 @@ import { ShortcutsDialog } from "@/components/map/shortcuts-dialog";
 import { getShortcutAction, isEditableTarget } from "@/lib/map-shortcuts";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { flowToMap, mapToFlow } from "@/lib/map-utils";
+import { saveMapToSupabase } from "@/lib/maps/persistence";
 import { initialSaveState, saveReducer } from "@/lib/maps/save-status";
 import { getMapProgress } from "@/data/sample-maps";
 import type { Bibble, BibbleNodeData, LearningMap } from "@/types/map";
