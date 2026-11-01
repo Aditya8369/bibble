@@ -7,6 +7,7 @@ import { MapHeader } from "@/components/map/map-header";
 import { ShortcutsDialog } from "@/components/map/shortcuts-dialog";
 import { getShortcutAction, isEditableTarget } from "@/lib/map-shortcuts";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import { flowToMap, mapToFlow } from "@/lib/map-utils";
 import { saveMapToSupabase } from "@/lib/maps/persistence";
 import { initialSaveState, saveReducer } from "@/lib/maps/save-status";
@@ -92,6 +93,7 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saveState, dispatchSave] = useReducer(saveReducer, initialSaveState);
   const saveVersionRef = useRef(0);
+  useUnsavedChangesGuard(editable && saveState.status !== "saved");
   const [justSaved, setJustSaved] = useState(false); // brief confirmation for the read-only header button
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
