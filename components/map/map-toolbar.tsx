@@ -1,15 +1,16 @@
 "use client";
 
-import { Check, Keyboard, Plus, Redo2, Save, Undo2, ZoomIn } from "lucide-react";
+import { AlertCircle, Check, Keyboard, Loader2, Plus, Redo2, Save, Undo2, ZoomIn } from "lucide-react";
+import { saveStatusLabel, type SaveStatus } from "@/lib/maps/save-status";
 
-export function MapToolbar({ onAdd, onUndo, onRedo, onFit, onSave, onShowShortcuts, saved, canUndo, canRedo }: {
+export function MapToolbar({ onAdd, onUndo, onRedo, onFit, onSave, onShowShortcuts, saveStatus, canUndo, canRedo }: {
   onAdd: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onFit: () => void;
   onSave: () => void;
   onShowShortcuts: () => void;
-  saved: boolean;
+  saveStatus: SaveStatus;
   canUndo: boolean;
   canRedo: boolean;
 }) {
@@ -21,6 +22,12 @@ export function MapToolbar({ onAdd, onUndo, onRedo, onFit, onSave, onShowShortcu
     <button className="toolbar-button toolbar-text-button" onClick={onFit} aria-keyshortcuts="F"><ZoomIn size={16} /> Fit view</button>
     <button className="toolbar-button" onClick={onShowShortcuts} aria-label="Keyboard shortcuts" aria-haspopup="dialog" aria-keyshortcuts="?" title="Keyboard shortcuts (?)"><Keyboard size={16} /></button>
     <span className="toolbar-spacer" />
-    <button className="toolbar-save" onClick={onSave} aria-keyshortcuts="Control+S Meta+S">{saved ? <Check size={16} /> : <Save size={16} />}{saved ? "Saved" : "Save"}</button>
+      <span className={`save-indicator save-indicator-${saveStatus}`} role="status" aria-live="polite" aria-atomic="true" data-testid="save-indicator">
+      {saveStatus === "saving" && <Loader2 size={14} className="save-indicator-spin" aria-hidden="true" />}
+      {saveStatus === "saved" && <Check size={14} aria-hidden="true" />}
+      {saveStatus === "error" && <AlertCircle size={14} aria-hidden="true" />}
+      <span>{saveStatusLabel[saveStatus]}</span>
+    </span>
+    <button className="toolbar-save" onClick={onSave} disabled={saveStatus === "saving"} aria-keyshortcuts="Control+S Meta+S"><Save size={16} />{saveStatus === "error" ? "Retry" : "Save"}</button>
   </div>;
 }

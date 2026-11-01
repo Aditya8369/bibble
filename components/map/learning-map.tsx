@@ -9,6 +9,7 @@ import { getShortcutAction, isEditableTarget } from "@/lib/map-shortcuts";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { flowToMap, mapToFlow } from "@/lib/map-utils";
 import { saveMapToSupabase } from "@/lib/maps/persistence";
+import { initialSaveState, saveReducer } from "@/lib/maps/save-status";
 import { getMapProgress } from "@/data/sample-maps";
 import type { Bibble, BibbleNodeData, LearningMap } from "@/types/map";
 import {
@@ -30,7 +31,7 @@ import {
 import { ArrowLeft, Star, Trash2 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 const nodeTypes = { bibble: BibbleNode };
 
@@ -89,7 +90,9 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<BibbleNodeData>>(initialFlow.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlow.edges);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [saveState, dispatchSave] = useReducer(saveReducer, initialSaveState);
+  const saveVersionRef = useRef(0);
+  const [justSaved, setJustSaved] = useState(false); // brief confirmation for the read-only header button
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -159,6 +162,8 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
       history.index = entries.length - 1;
       setCanUndo(history.index > 0);
       setCanRedo(false);
+      saveVersionRef.current += 1;
+      dispatchSave({ type: "edit" });
     },
     [editable],
   );
@@ -183,6 +188,8 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
     restoreSnapshot(history.entries[history.index]);
     setCanUndo(history.index > 0);
     setCanRedo(true);
+    saveVersionRef.current += 1;
+    dispatchSave({ type: "edit" });
   }, [editable, restoreSnapshot]);
 
   const redo = useCallback(() => {
@@ -192,6 +199,8 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
     restoreSnapshot(history.entries[history.index]);
     setCanUndo(true);
     setCanRedo(history.index < history.entries.length - 1);
+    saveVersionRef.current += 1;
+    dispatchSave({ type: "edit" });
   }, [editable, restoreSnapshot]);
 
   useEffect(() => {
@@ -258,14 +267,18 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
     const next = flowToMap(initialMap, currentNodes, edgesRef.current);
     setStoredMaps((current) => [...current.filter((m) => m.id !== next.id), next]);
     setSaveError(null);
+    // Edits already dispatched are covered by this save; later ones keep the map unsaved.
+    const version = saveVersionRef.current;
+    dispatchSave({ type: "save-start" });
     const persisted = await saveMapToSupabase(next);
     if (!persisted) {
-      setSaved(false);
+      dispatchSave({ type: "save-failure", version });
       setSaveError("Your local changes are saved, but Supabase could not be updated. Please try again.");
       return;
     }
-    setSaved(persisted);
-    if (persisted) window.setTimeout(() => setSaved(false), 1800);
+    dispatchSave({ type: "save-success", version });
+    setJustSaved(true);
+    window.setTimeout(() => setJustSaved(false), 1800);
   }, [initialMap, setStoredMaps]);
 
   const addBibble = () => {
@@ -356,7 +369,7 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
 
   return (
      <main className={`map-page ${editable ? "learning-map-editor" : ""}`}>
-       {!editable && <MapHeader map={currentMap} onSave={() => saveMap()} saved={saved} />}
+       {!editable && <MapHeader map={currentMap} onSave={() => saveMap()} saved={justSaved} />}
        {!editable && (
          <div className="map-page-copy">
            <Link href="/explore" className="back-link">
@@ -377,7 +390,7 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
              onFit={fitView}
              onSave={() => saveMap()}
              onShowShortcuts={() => setShowShortcuts(true)}
-             saved={saved}
+             saveStatus={saveState.status}
              canUndo={canUndo}
              canRedo={canRedo}
            />

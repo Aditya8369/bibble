@@ -2556,3 +2556,9 @@ html.dark[data-theme="strawberry-lemonade"] {
 @media (prefers-reduced-motion: reduce) {
   .skeleton, .skeleton-art { animation: none; }
 }
+.save-indicator { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 12px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.save-indicator-unsaved { color: var(--foreground, inherit); }
+.save-indicator-error { color: var(--danger, #b42318); }
+.save-indicator-spin { animation: save-indicator-spin 1s linear infinite; }
+@keyframes save-indicator-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .save-indicator-spin { animation: none; } }
