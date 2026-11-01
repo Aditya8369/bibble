@@ -44,3 +44,38 @@ export function filterRooms(rooms: StudyRoom[], filters: RoomFilters) {
       (filters.tags.length === 0 || (room.tags ?? []).some((tag) => filters.tags.includes(tag)))
   );
 }
+
+
+export interface RoomEmptyState {
+  title: string;
+  description: string;
+  /** What the single "clear" button resets, so the button label can match. */
+  clear: "search" | "filters" | "both";
+}
+
+const MAX_SHOWN_QUERY = 40;
+
+/** Copy for the "no rooms found" state, based on whether a search, filters, or both are active. */
+export function getRoomEmptyState(query: string, activeFilters: number): RoomEmptyState {
+  const term = query.trim();
+  const shown = term.length > MAX_SHOWN_QUERY ? `${term.slice(0, MAX_SHOWN_QUERY)}…` : term;
+  if (term && activeFilters > 0) {
+    return {
+      title: `No rooms match “${shown}” with these filters`,
+      description: "Try a different search, remove a filter, or clear everything to see all rooms.",
+      clear: "both",
+    };
+  }
+  if (term) {
+    return {
+      title: `No rooms match “${shown}”`,
+      description: "Check the spelling, or try a shorter or more general word.",
+      clear: "search",
+    };
+  }
+  return {
+    title: "No rooms match those filters",
+    description: "Try removing a filter or two, or clear everything to see all rooms.",
+    clear: "filters",
+  };
+}
