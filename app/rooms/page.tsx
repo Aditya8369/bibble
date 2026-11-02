@@ -1,28 +1,99 @@
 "use client";
 
+import { RoomFilterPanel } from "@/components/rooms/room-filters";
+import { RoomGuidelines } from "@/components/rooms/room-guidelines";
 import { StudyRoomCard } from "@/components/rooms/study-room-card";
+import { StudyRoomCardSkeleton } from "@/components/rooms/study-room-card-skeleton";
 import { SiteHeader } from "@/components/site-header";
 import { studyRooms } from "@/data/study-rooms";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import {
+  countActiveFilters,
+  emptyRoomFilters,
+  filterRooms,
+  getRoomEmptyState,
+  getRoomFilterOptions,
+  type RoomFilterGroup,
+  type RoomFilters,
+} from "@/lib/room-filters";
 import { CUSTOM_ROOMS_KEY } from "@/lib/rooms/custom-rooms";
 import type { StudyRoom } from "@/types/room";
-import { Plus, Search, Star, Users } from "lucide-react";
+import { Plus, Search, Star, Users, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
+
+// Number of placeholder cards shown while the room list is loading.
+const SKELETON_COUNT = 4;
+
+const subscribe = () => () => {};
+
+// False on the server and during hydration, true once the client has taken over.
+function useClientReady() {
+  return useSyncExternalStore(subscribe, () => true, () => false);
+}
 
 export default function RoomsPage() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<RoomFilters>(emptyRoomFilters);
+  const ready = useClientReady();
   const [customRooms] = useLocalStorage<StudyRoom[]>(CUSTOM_ROOMS_KEY, []);
+  const [pendingRoom, setPendingRoom] = useState<StudyRoom | null>(null);
+  const entryTriggerRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const openGuidelines = useCallback((room: StudyRoom, trigger: HTMLButtonElement) => {
+    entryTriggerRef.current = trigger;
+    setPendingRoom(room);
+  }, []);
+
+  const closeGuidelines = useCallback(() => {
+    setPendingRoom(null);
+    entryTriggerRef.current?.focus();
+  }, []);
+
+  const confirmEntry = useCallback(() => {
+    if (!pendingRoom) return;
+    const roomId = pendingRoom.id;
+    setPendingRoom(null);
+    router.push(`/rooms/${roomId}`);
+  }, [pendingRoom, router]);
+
+  const allRooms = useMemo(() => [...studyRooms, ...customRooms], [customRooms]);
+
+  // Filter options come from the rooms themselves (including rooms the user created), counted over the full list.
+  const options = useMemo(() => getRoomFilterOptions(allRooms), [allRooms]);
 
   const rooms = useMemo(
     () =>
-      [...studyRooms, ...customRooms].filter((room) =>
+      filterRooms(allRooms, filters).filter((room) =>
         `${room.name} ${room.topic} ${room.tags.join(" ")}`
           .toLowerCase()
           .includes(query.toLowerCase())
       ),
-    [query, customRooms]
+    [query, filters, allRooms]
   );
+
+  const toggleFilter = (group: RoomFilterGroup, value: string) =>
+    setFilters((current) => ({
+      ...current,
+      [group]: current[group].includes(value)
+        ? current[group].filter((item) => item !== value)
+        : [...current[group], value],
+    }));
+
+  const clearFilters = () => {
+    setFilters(emptyRoomFilters);
+    setQuery("");
+  };
+  
+  const clearSearch = () => {
+    setQuery("");
+    searchInputRef.current?.focus();
+  };
+
+  const emptyState = getRoomEmptyState(query, countActiveFilters(filters));
 
   return (
     <main className="rooms-page">
@@ -54,6 +125,7 @@ export default function RoomsPage() {
         <div className="room-search">
           <Search size={17} />
           <input
+            ref={searchInputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search a topic or room"
@@ -61,8 +133,10 @@ export default function RoomsPage() {
           />
         </div>
         <div className="rooms-toolbar-actions">
-          <span className="rooms-toolbar-note">
-            {rooms.length} open rooms · no sign-up needed
+          <span className="rooms-toolbar-note" role="status" aria-live="polite">
+            {ready
+              ? `${rooms.length} ${rooms.length === 1 ? "open room" : "open rooms"} · no sign-up needed`
+              : "Loading rooms…"}
           </span>
           <Link href="/rooms/new" className="button-primary">
             <Plus size={16} aria-hidden="true" /> Create a room
@@ -70,11 +144,34 @@ export default function RoomsPage() {
         </div>
       </div>
 
-      <section className="room-grid">
-        {rooms.map((room) => (
-          <StudyRoomCard key={room.id} room={room} />
-        ))}
-      </section>
+      {ready && <RoomFilterPanel options={options} filters={filters} onToggle={toggleFilter} onClear={clearFilters} />}
+
+      {!ready ? (
+        <section className="room-grid" aria-busy="true" aria-label="Study rooms">
+          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+            <StudyRoomCardSkeleton key={index} />
+          ))}
+        </section>
+      ) : rooms.length > 0 ? (
+        <section className="room-grid" aria-label="Study rooms">
+          {rooms.map((room) => (
+            <StudyRoomCard key={room.id} room={room} onEnter={openGuidelines} />
+          ))}
+        </section>
+      ) : (
+        <section className="rooms-empty">
+                    <h2>{emptyState.title}</h2>
+          <p>{emptyState.description}</p>
+          <button
+            type="button"
+            className="room-filter-clear"
+            onClick={emptyState.clear === "search" ? clearSearch : clearFilters}
+          >
+            <X size={14} />{" "}
+            {emptyState.clear === "search" ? "Clear search" : emptyState.clear === "both" ? "Clear search and filters" : "Clear filters"}
+          </button>
+        </section>
+      )}
 
       <section className="rooms-callout cozy-wallpaper-pattern">
         <div className="callout-spark">
@@ -91,6 +188,15 @@ export default function RoomsPage() {
           Create a map <Star size={16} />
         </Link>
       </section>
+
+      {pendingRoom && (
+        <RoomGuidelines
+          roomName={pendingRoom.name}
+          open
+          onClose={closeGuidelines}
+          onConfirm={confirmEntry}
+        />
+      )}
     </main>
   );
 }
