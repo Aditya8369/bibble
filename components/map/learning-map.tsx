@@ -8,6 +8,7 @@ import { ShortcutsDialog } from "@/components/map/shortcuts-dialog";
 import { getShortcutAction, isEditableTarget } from "@/lib/map-shortcuts";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
+import { exportMapAsBibbleJson } from "@/lib/maps/export-import";
 import { flowToMap, mapToFlow } from "@/lib/map-utils";
 import { saveMapToSupabase } from "@/lib/maps/persistence";
 import { initialSaveState, saveReducer } from "@/lib/maps/save-status";
@@ -362,6 +363,11 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
 
   const fitView = () => flowRef.current?.fitView({ padding: 0.22 });
 
+  const handleExport = useCallback(() => {
+    const current = flowToMap(initialMap, nodesRef.current, edgesRef.current);
+    exportMapAsBibbleJson(current);
+  }, [initialMap]);
+
   const actionsRef = useRef({ add: addBibble, fit: fitView, save: () => saveMap() });
   useEffect(() => {
     actionsRef.current = { add: addBibble, fit: fitView, save: () => saveMap() };
@@ -407,6 +413,7 @@ export function LearningMapCanvas({ initialMap, editable = false, preferInitialM
              onUndo={undo}
              onRedo={redo}
              onFit={fitView}
+             onExport={handleExport}
              onSave={() => saveMap()}
              onShowShortcuts={() => setShowShortcuts(true)}
              saveStatus={saveState.status}

@@ -218,6 +218,85 @@
   margin-top: 4px;
 }
 
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+  color: var(--muted);
+  font: 700 11px var(--font-body), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.importLabel {
+  display: block;
+  cursor: pointer;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.importButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 18px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--background);
+  color: var(--foreground);
+  font: 700 13px var(--font-body), sans-serif;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease;
+}
+
+.importButton:hover {
+  border-color: var(--primary);
+  background: var(--lavender);
+  color: var(--primary);
+}
+
+.fileInput:focus-visible + .importButton {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--danger, #b42318) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger, #b42318) 25%, transparent);
+  color: var(--danger, #b42318);
+  font: 600 13px var(--font-body), sans-serif;
+  line-height: 1.4;
+}
+
 @media (max-width: 650px) {
   .header {
     height: 72px;
