@@ -1,21 +1,37 @@
 import type { CreateLearningMapInput } from "@/lib/maps/create-learning-map";
 import { useTheme } from "@/hooks/use-theme";
-import { ArrowUpRight } from "lucide-react";
-import { FormEvent } from "react";
+import { AlertCircle, ArrowUpRight, Upload } from "lucide-react";
+import { ChangeEvent, FormEvent } from "react";
 import styles from "../create-page.module.css";
 
 interface CreateMapFormProps {
   values: CreateLearningMapInput;
   onChange: (values: CreateLearningMapInput) => void;
   onCreate: (values: CreateLearningMapInput) => void;
+  onImport?: (file: File) => void;
+  importError?: string | null;
 }
 
-export function CreateMapForm({ values, onChange, onCreate }: CreateMapFormProps) {
+export function CreateMapForm({
+  values,
+  onChange,
+  onCreate,
+  onImport,
+  importError,
+}: CreateMapFormProps) {
   const { motif } = useTheme();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     onCreate(values);
+  }
+
+  function handleFileInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file && onImport) {
+      onImport(file);
+    }
+    event.target.value = "";
   }
 
   return (
@@ -63,6 +79,34 @@ export function CreateMapForm({ values, onChange, onCreate }: CreateMapFormProps
       <button className={`button-primary ${styles.submit}`} type="submit">
         Create map <ArrowUpRight size={17} />
       </button>
+
+      {onImport && (
+        <>
+          <div className={styles.divider}>
+            <span>or</span>
+          </div>
+
+          <label htmlFor="import-map-file" className={styles.importLabel}>
+            <input
+              id="import-map-file"
+              type="file"
+              accept=".json,application/json"
+              onChange={handleFileInputChange}
+              className={styles.fileInput}
+              aria-describedby={importError ? "import-map-error" : undefined}
+            />
+            <span className={styles.importButton}>
+              <Upload size={16} /> Import map
+            </span>
+          </label>
+        </>
+      )}
+
+      {importError && (
+        <p id="import-map-error" role="alert" className={styles.errorMessage}>
+          <AlertCircle size={15} /> {importError}
+        </p>
+      )}
     </form>
   );
 }

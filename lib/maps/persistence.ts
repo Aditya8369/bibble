@@ -1,5 +1,6 @@
 import type { Bibble, LearningMap, MapEdge } from "@/types/map";
 import { createClient } from "@/lib/supabase/client";
+import { getMapExportFilename } from "./export-import";
 
 type MapRow = Pick<LearningMap, "id" | "title" | "description" | "category" | "accent">;
 type BibbleRow = Omit<Bibble, "position"> & { map_id: string; position_x: number; position_y: number };
@@ -135,14 +136,14 @@ export async function downloadMapExport(map: LearningMap): Promise<void> {
     // Fall back to a local download when Storage is unavailable.
   }
 
-  downloadBlob(blob, map.id);
+  downloadBlob(blob, map.title);
 }
 
-function downloadBlob(blob: Blob, mapId: string) {
+function downloadBlob(blob: Blob, title: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${mapId}.json`;
+  anchor.download = getMapExportFilename(title);
   anchor.click();
   URL.revokeObjectURL(url);
 }
